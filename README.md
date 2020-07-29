@@ -167,7 +167,7 @@ use Symfony\Component\Panther\Client;
 
 class E2eTest extends PantherTestCase
 {
-    public function testMyApp()
+    public function testMyApp(): void
     {
         $symfonyClient = static::createClient(); // A cute kitty: Symfony's functional test tool
         $httpBrowserClient = static::createHttpBrowserClient(); // An agile lynx: HttpBrowser
@@ -238,7 +238,7 @@ Since Panther implements the API of popular libraries, it already has extensive 
 The following environment variables can be set to change some Panther's behaviour:
 
 * `PANTHER_NO_HEADLESS`: to disable browser's headless mode (will display the testing window, useful to debug)
-* `PANTHER_WEB_SERVER_DIR`: to change the project's document root (default to `public/`)
+* `PANTHER_WEB_SERVER_DIR`: to change the project's document root (default to `./public/`, relative paths **must start** by `./`)
 * `PANTHER_WEB_SERVER_PORT`: to change the web server's port (default to `9080`)
 * `PANTHER_WEB_SERVER_ROUTER`:  to use a web server router script which is run at the start of each HTTP request
 * `PANTHER_EXTERNAL_BASE_URI`: to use an external web server (the PHP built-in web server will not be started)
@@ -253,7 +253,7 @@ The following environment variables can be set to change some Panther's behaviou
 
 #### Firefox-specific Environment Variables
 
-* `PANTHER_FIREFOX_DRIVER_BINARY`: to use another `geckodriver` binary, instead of relying on the ones already provided by Panther
+* `PANTHER_GECKO_DRIVER_BINARY`: to use another `geckodriver` binary, instead of relying on the ones already provided by Panther
 * `PANTHER_FIREFOX_ARGUMENTS`: to customize Firefox arguments. You need to set `PANTHER_NO_HEADLESS` to fully customize.
 * `PANTHER_FIREFOX_BINARY`: to use another `firefox` binary
 
@@ -293,7 +293,7 @@ use Symfony\Component\Panther\PantherTestCase;
 
 class E2eTest extends PantherTestCase
 {
-    public function testMyApp()
+    public function testMyApp(): void
     {
         $pantherClient = static::createPantherClient(['external_base_uri' => 'https://localhost']);
         // the PHP integrated web server will not be started
@@ -319,6 +319,8 @@ FROM php:latest
 
 RUN apt-get update && apt-get install -y libzip-dev zlib1g-dev chromium && docker-php-ext-install zip
 ENV PANTHER_NO_SANDBOX 1
+# Not mandatory, but recommended
+ENV PANTHER_CHROME_ARGUMENTS='--disable-dev-shm-usage'
 ```
 
 Build it with `docker build . -t myproject`
@@ -333,10 +335,35 @@ RUN apk add --no-cache \
 ENV PANTHER_CHROME_DRIVER_BINARY /usr/lib/chromium/chromedriver
 ```
 
+### GitHub Actions Integration
+
+Panther works out of the box with [GitHub Actions](https://help.github.com/en/actions).
+Here is a minimal `.github/workflows/panther.yml` file to run Panther tests:
+
+```yaml
+name: Run Panther tests
+
+on: [ push, pull_request ]
+
+jobs:
+  tests:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist
+
+      - name: Run test suite
+        run: vendor/bin/phpunit
+```
+
 ### Travis CI Integration
 
-Panther will work out of the box with Travis if you add the Chrome addon. Here is a minimal `.travis.yml` file to run
-Panther tests:
+Panther will work out of the box with [Travis CI](https://travis-ci.com/) if you add the Chrome addon.
+Here is a minimal `.travis.yml` file to run Panther tests:
 
 ```yaml
 language: php
@@ -354,7 +381,7 @@ script:
 
 ### Gitlab CI Integration
 
-Here is a minimal `.gitlab-ci.yml` file to run:
+Here is a minimal `.gitlab-ci.yml` file to run Panther tests with [Gitlab CI](https://docs.gitlab.com/ee/ci/):
 
 ```yaml
 image: ubuntu:bionic
@@ -397,8 +424,8 @@ test:
 
 ### AppVeyor Integration
 
-Panther will work out of the box with AppVeyor as long as Google Chrome is installed. Here is a minimal `appveyor.yml`
-file to run Panther tests:
+Panther will work out of the box with [AppVeyor](https://www.appveyor.com/) as long as Google Chrome is installed.
+Here is a minimal `appveyor.yml` file to run Panther tests:
 
 ```yaml
 build: false
@@ -412,7 +439,7 @@ install:
   - ps: Set-Service wuauserv -StartupType Manual
   - cinst -y php composer googlechrome
   - refreshenv
-  - cd c:\tools\php73
+  - cd c:\tools\php74
   - copy php.ini-production php.ini /Y
   - echo date.timezone="UTC" >> php.ini
   - echo extension_dir=ext >> php.ini
@@ -438,14 +465,13 @@ If you want to use Panther with other testing tools like [LiipFunctionalTestBund
 namespace App\Tests\Controller;
 
 use Liip\FunctionalTestBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Panther\PantherTestCaseTrait;
 
 class DefaultControllerTest extends WebTestCase
 {
     use PantherTestCaseTrait; // this is the magic. Panther is now available.
 
-    public function testWithFixtures()
+    public function testWithFixtures(): void
     {
         $this->loadFixtures([]); // load your fixtures
         $client = self::createPantherClient(); // create your panther client
